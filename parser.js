@@ -14,9 +14,9 @@ export default function App() {
       <h1>Hello CodeSandbox</h1>
       <h2 vif={visible} another="cs">
         <span>Start editing to see some magic happen!</span>
-        
+        <div vif={visible}>inner if</div>
       </h2>
-      <div vif={visible}>inner if</div>
+    //   <div vif={visible}>inner if</div>
     </div>
   );
 }
@@ -24,7 +24,40 @@ export default function App() {
 
 `;
 
-// console.log(t);
+// console.log(t
+
+const innerVisitor = {
+  JSX(path) {
+    if (t.isJSXIdentifier(path.node, { name: "vif" })) {
+    //   path.traverse(innerVisitor);
+      console.log(JSON.stringify(path.node));
+      console.log(JSON.stringify(path.parentPath.node));
+
+      const attrPath = path.parentPath;
+      // const jsxPath = attrPath.parentPath;
+      // const containerPath = jsxPath.parentPath;
+
+      const containerPath = path.findParent((p) => p.isJSXElement());
+
+      attrPath.remove();
+      containerPath.parentPath = null;
+      try {
+        containerPath.replaceWith(
+          t.jSXExpressionContainer(
+            t.logicalExpression(
+              "&&",
+              t.identifier("visible"),
+              containerPath.node
+            )
+          )
+        );
+      } catch (e) {
+        console.error("error", e);
+      }
+      containerPath.stop();
+    }
+  },
+};
 
 const output = babel.transformSync(code1, {
   plugins: [
@@ -40,40 +73,7 @@ const output = babel.transformSync(code1, {
             }
           },
           JSX(path) {
-            console.log(
-              `=======================visiting ${JSON.stringify(
-                path.node.name
-              )}=======================`
-            );
-
-            // console.log(
-            //   "is vif",
-            //   t.isJSXIdentifier(path.node, { name: "vif" })
-            // );
-
-            if (t.isJSXIdentifier(path.node, { name: "vif" })) {
-              console.log(JSON.stringify(path.node));
-              console.log(JSON.stringify(path.parentPath.node));
-
-              const attrPath = path.parentPath;
-              const jsxPath = attrPath.parentPath;
-              const containerPath = jsxPath.parentPath;
-
-              attrPath.remove();
-
-              containerPath.replaceWith(
-                t.jSXExpressionContainer(
-                  t.logicalExpression(
-                    "&&",
-                    t.identifier("visible"),
-                    containerPath.node
-                  )
-                )
-              );
-            //   path.parentPath = /
-            //   containerPath.replaceWith(t.logicalExpression("&&", t.identifier('visible'), jsxPath.node));
-              containerPath.skip();
-            }
+            path.traverse(innerVisitor);
           },
         },
       };
